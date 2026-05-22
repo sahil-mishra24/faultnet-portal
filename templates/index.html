@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page">
+  <div class="section-label">Report Fault</div>
+
+  {% if success %}
+  <div class="alert-success">✓ Fault report submitted successfully — AI analysis complete</div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;">
+
+    <!-- Main Form -->
+    <div class="panel">
+      <div class="panel-title">New Fault Submission</div>
+
+      <form method="POST" action="{{ url_for('submit') }}" id="fault-form">
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label class="form-label">Fault Title</label>
+            <input type="text" name="title" class="form-input"
+              placeholder="e.g. Motor Unit 3 Overheating" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Machine / Unit ID</label>
+            <input type="text" name="machine_id" class="form-input"
+              placeholder="e.g. CNC-04, PUMP-B2">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reported By</label>
+            <input type="text" name="submitted_by" class="form-input"
+              placeholder="Your name or operator ID">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Manual Priority</label>
+            <select name="priority" class="form-select">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Fault Description</label>
+            <textarea name="description" id="description-input" class="form-textarea"
+              placeholder="Describe the fault in detail — e.g. 'Motor is overheating and vibration is increasing. Coolant flow appears reduced.'"
+              required></textarea>
+          </div>
+
+        </div>
+
+        <!-- Live AI Preview -->
+        <div class="ai-preview" id="ai-preview">
+          <div class="ai-preview-title">AI Diagnostic Preview</div>
+          <div class="ai-chips">
+            <div class="ai-chip">
+              <span class="ai-chip-label">Predicted Issue</span>
+              <span class="ai-chip-val" id="ai-issue-val">—</span>
+            </div>
+            <div class="ai-chip">
+              <span class="ai-chip-label">Urgency Level</span>
+              <span class="ai-chip-val" id="ai-urgency-val">—</span>
+            </div>
+            <div class="ai-chip">
+              <span class="ai-chip-label">Suggested Action</span>
+              <span class="ai-chip-val" id="ai-action-val">—</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">⚡ Submit Fault Report</button>
+      </form>
+    </div>
+
+    <!-- Right sidebar info -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">AI Classification Guide</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:2;">
+          The AI engine analyzes your description and automatically predicts the fault category, urgency, and action.
+          <br><br>
+          Try keywords like:<br>
+          <span style="color:var(--red);">overheating, fire, spark</span><br>
+          <span style="color:#ffcc44;">vibration, hydraulic, bearing</span><br>
+          <span style="color:var(--cyan);">sensor, belt, coolant</span>
+          <br><br>
+          The AI result is stored with your report for admin review.
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Priority Guide</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-critical">Critical</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Immediate shutdown required</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-high">High</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Address within hours</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-medium">Medium</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Schedule this week</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-low">Low</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Log & monitor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var debounceTimer;
+  var descInput = document.getElementById('description-input');
+
+  descInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      var text = descInput.value.trim();
+      if (text.length < 5) {
+        document.getElementById('ai-issue-val').textContent   = '—';
+        document.getElementById('ai-urgency-val').textContent = '—';
+        document.getElementById('ai-action-val').textContent  = '—';
+        document.getElementById('ai-urgency-val').className = 'ai-chip-val';
+        return;
+      }
+      fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: text })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        document.getElementById('ai-issue-val').textContent   = d.issue;
+        document.getElementById('ai-urgency-val').textContent = d.urgency;
+        document.getElementById('ai-action-val').textContent  = d.action;
+        var u = document.getElementById('ai-urgency-val');
+        u.className = 'ai-chip-val ' + d.urgency;
+      });
+    }, 400);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaultNet 4.0 — Industrial Monitoring Portal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="grid-bg"></div>
+  <div class="scan-line"></div>
+  <div class="corner-accent tl"></div>
+  <div class="corner-accent tr"></div>
+  <div class="corner-accent bl"></div>
+  <div class="corner-accent br"></div>
+
+  {% if session.get('logged_in') %}
+  <nav class="navbar">
+    <div class="nav-logo">
+      <div class="logo-hex">⬡</div>
+      <div>
+        <div class="logo-text">FaultNet 4.0</div>
+        <div class="logo-sub">Smart Industry 4.0 Portal</div>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        Dashboard
+      </a>
+      <a href="{{ url_for('submit') }}"
+         class="nav-link {% if request.endpoint == 'submit' %}active{% endif %}">
+        Report Fault
+      </a>
+      <a href="{{ url_for('logout') }}" class="nav-link logout">Logout</a>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="nav-status">
+        <div class="dot"></div>
+        <span>SYSTEMS ONLINE</span>
+      </div>
+      <div class="time-display" id="clock">--:--:--</div>
+    </div>
+  </nav>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  <script>
+    (function tick() {
+      var el = document.getElementById('clock');
+      if (el) el.textContent = new Date().toTimeString().slice(0,8);
+      setTimeout(tick, 1000);
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

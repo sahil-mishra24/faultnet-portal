@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page">
+
+  <!-- Stats Row -->
+  <div class="section-label">System Overview</div>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Reports</div>
+      <div class="stat-value">{{ total }}</div>
+      <div class="stat-trend">▸ All time</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Critical Active</div>
+      <div class="stat-value">{{ critical }}</div>
+      <div class="stat-trend" style="color:#ff6666;">▲ Needs attention</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">In Progress</div>
+      <div class="stat-value">{{ in_progress }}</div>
+      <div class="stat-trend" style="color:#ffcc44;">◈ Active repairs</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Resolved</div>
+      <div class="stat-value">{{ resolved }}</div>
+      <div class="stat-trend" style="color:#44ffaa;">
+        ✓
+        {% if total > 0 %}{{ "%.0f"|format(resolved / total * 100) }}% rate{% else %}0% rate{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Two column layout -->
+  <div class="dash-two-col">
+
+    <!-- Left: mini stats -->
+    <div>
+      <div class="section-label">By AI Urgency</div>
+      <div class="panel">
+        {% set crit_count = faults | selectattr('ai_urgency','equalto','CRITICAL') | list | length %}
+        {% set high_count = faults | selectattr('ai_urgency','equalto','HIGH')     | list | length %}
+        {% set med_count  = faults | selectattr('ai_urgency','equalto','MEDIUM')   | list | length %}
+        {% set low_count  = faults | selectattr('ai_urgency','equalto','LOW')      | list | length %}
+        {% set max_count  = [crit_count, high_count, med_count, low_count, 1] | max %}
+
+        <div class="mini-bars">
+          <div class="bar-row">
+            <div class="bar-label">CRITICAL</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (crit_count / max_count * 100) | int }}%;background:#ff4444;"></div>
+            </div>
+            <div class="bar-count">{{ crit_count }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">HIGH</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (high_count / max_count * 100) | int }}%;background:#ffaa00;"></div>
+            </div>
+            <div class="bar-count">{{ high_count }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">MEDIUM</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (med_count / max_count * 100) | int }}%;background:#00c8ff;"></div>
+            </div>
+            <div class="bar-count">{{ med_count }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">LOW</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (low_count / max_count * 100) | int }}%;background:#00ff88;"></div>
+            </div>
+            <div class="bar-count">{{ low_count }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">By Status</div>
+      <div class="panel">
+        {% set open_c   = faults | selectattr('status','equalto','open')        | list | length %}
+        {% set prog_c   = faults | selectattr('status','equalto','in_progress') | list | length %}
+        {% set res_c    = faults | selectattr('status','equalto','resolved')    | list | length %}
+        {% set max_s    = [open_c, prog_c, res_c, 1] | max %}
+
+        <div class="mini-bars">
+          <div class="bar-row">
+            <div class="bar-label">OPEN</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (open_c / max_s * 100) | int }}%;background:#00c8ff;"></div>
+            </div>
+            <div class="bar-count">{{ open_c }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">IN PROGRESS</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (prog_c / max_s * 100) | int }}%;background:#ffaa00;"></div>
+            </div>
+            <div class="bar-count">{{ prog_c }}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">RESOLVED</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{{ (res_c / max_s * 100) | int }}%;background:#00ff88;"></div>
+            </div>
+            <div class="bar-count">{{ res_c }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Quick Actions</div>
+      <div class="panel">
+        <a href="{{ url_for('submit') }}" class="btn-submit" style="display:block;text-align:center;text-decoration:none;">
+          ⚡ Report New Fault
+        </a>
+      </div>
+    </div>
+
+    <!-- Right: Fault Table -->
+    <div>
+      <div class="section-label">Fault Reports</div>
+      <div class="panel">
+
+        {% if faults %}
+        <table class="fault-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Machine</th>
+              <th>AI Issue</th>
+              <th>AI Urgency</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in faults %}
+            <tr>
+              <td class="fault-id">#F-{{ "%04d" | format(f.id) }}</td>
+              <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <span title="{{ f.description }}">{{ f.title }}</span>
+              </td>
+              <td class="fault-machine">{{ f.machine_id or '—' }}</td>
+              <td style="font-size:11px;font-family:var(--font-mono);">{{ f.ai_issue }}</td>
+              <td>
+                {% if f.ai_urgency == 'CRITICAL' %}
+                  <span class="badge badge-critical">{{ f.ai_urgency }}</span>
+                {% elif f.ai_urgency == 'HIGH' %}
+                  <span class="badge badge-high">{{ f.ai_urgency }}</span>
+                {% elif f.ai_urgency == 'MEDIUM' %}
+                  <span class="badge badge-medium">{{ f.ai_urgency }}</span>
+                {% else %}
+                  <span class="badge badge-low">{{ f.ai_urgency }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if f.status == 'open' %}
+                  <span class="badge badge-open">Open</span>
+                {% elif f.status == 'in_progress' %}
+                  <span class="badge badge-progress">In Progress</span>
+                {% else %}
+                  <span class="badge badge-resolved">Resolved</span>
+                {% endif %}
+              </td>
+              <td style="white-space:nowrap;">
+                <form method="POST" action="{{ url_for('update_status', fault_id=f.id) }}"
+                      style="display:inline-flex;gap:4px;align-items:center;">
+                  <select name="status" class="status-select">
+                    <option value="open"        {% if f.status=='open' %}selected{% endif %}>Open</option>
+                    <option value="in_progress" {% if f.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="resolved"    {% if f.status=='resolved' %}selected{% endif %}>Resolved</option>
+                  </select>
+                  <button type="submit" class="btn-update">Update</button>
+                </form>
+                <form method="POST" action="{{ url_for('delete_fault', fault_id=f.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Delete fault #F-{{ '%04d'|format(f.id) }}?')">
+                  <button type="submit" class="btn-delete">Del</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:48px 0;font-family:var(--font-mono);font-size:12px;color:var(--muted);">
+          NO FAULT REPORTS YET<br>
+          <a href="{{ url_for('submit') }}" style="color:var(--cyan);margin-top:12px;display:inline-block;">
+            Submit First Report →
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
